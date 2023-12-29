@@ -1,6 +1,10 @@
 import { Component } from '@angular/core';
 import { FormGroup, FormControl, Validators } from '@angular/forms';
-import { AngularFireAuth} from '@angular/fire/compat/auth';
+import { AuthService } from 'src/app/services/auth.service';
+import IUser from 'src/app/models/user.model';
+import { RegisterValidators } from '../validators/register-validators';
+import { EmailTaken } from '../validators/email-taken';
+
 @Component({
   selector: 'app-register',
   templateUrl: './register.component.html',
@@ -8,7 +12,10 @@ import { AngularFireAuth} from '@angular/fire/compat/auth';
 })
 export class RegisterComponent {
 
-  constructor(private auth : AngularFireAuth){}
+  constructor(
+    private authService:AuthService, 
+    private emailTaken: EmailTaken)
+    {}
 
   inSubmission = false
   name = new FormControl('', [
@@ -18,12 +25,12 @@ export class RegisterComponent {
   email = new FormControl('', [
     Validators.required, 
     Validators.email
-  ])
+  ], [this.emailTaken.validate])
   password = new FormControl('',[
     Validators.required,
     Validators.pattern(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,}$/gm)
   ])
-  age = new FormControl('', [
+  age = new FormControl<number | null>(null , [
     Validators.required, 
     Validators.min(18),
     Validators.max(100)
@@ -47,7 +54,7 @@ export class RegisterComponent {
     age : this.age,
     confirmpassword : this.confirmpassword,
     phone : this.phone
-  })
+  },[RegisterValidators.match('password','confirmpassword')])
 
   async register(){
     this.showAlert = true
@@ -55,13 +62,8 @@ export class RegisterComponent {
     this.alertColor = 'blue'
     this.inSubmission = true
 
-    const {email,password} = this.registerform.value
-
     try{
-      const userCredential = await this.auth.createUserWithEmailAndPassword(
-        email as string, password as string
-    );  
-    console.log(userCredential);
+        await this.authService.createUser(this.registerform.value as IUser)
     }
     catch(e){
       console.log(e);
